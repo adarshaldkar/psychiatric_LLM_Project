@@ -73,6 +73,32 @@ export default function ChatWindow({ onSendSuggestion, onOpenSidebar, onToggleSi
           padding: "2px 8px", borderRadius: 99, border: "1px solid var(--border)",
           whiteSpace: "nowrap"
         }}>Psychiatric Knowledge</span>
+
+        <div style={{ flex: 1 }} />
+
+        {/* GitHub Repository Star Badge */}
+        <a 
+          href="https://github.com/adarshaldkar/psychiatric_LLM_Project" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          style={{
+            display: "flex", alignItems: "center", gap: 6,
+            background: "rgba(255, 255, 255, 0.05)", border: "1px solid rgba(255,255,255,0.12)",
+            borderRadius: 20, padding: "5px 12px", fontSize: 12, fontWeight: 500,
+            color: "var(--text-primary)", textDecoration: "none", transition: "all 0.15s"
+          }}
+          onMouseEnter={e => { e.currentTarget.style.background = "rgba(255, 255, 255, 0.12)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.25)" }}
+          onMouseLeave={e => { e.currentTarget.style.background = "rgba(255, 255, 255, 0.05)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.12)" }}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+            <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" />
+          </svg>
+          <span>GitHub</span>
+          <span style={{ 
+            background: "rgba(16, 163, 127, 0.2)", border: "1px solid rgba(16, 163, 127, 0.4)",
+            padding: "1px 6px", borderRadius: 10, fontSize: 10, color: "#2dd4bf", fontWeight: 600
+          }}>98%</span>
+        </a>
       </div>
 
       {/* Status bar */}
