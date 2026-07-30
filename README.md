@@ -1,160 +1,146 @@
 # 🧠 MindCare AI — Specialized Psychiatric Knowledge Platform
 
-[![Release Status](https://img.shields.io/badge/Release_Status-100%25_Certified_RC-success?style=flat-square&logo=git)](https://github.com/adarshaldkar/psychiatric_LLM_Project)
-[![Grade](https://img.shields.io/badge/Benchmark_Grade-98%25_A%2B_Master-emerald?style=flat-square&logo=pytest)](https://github.com/adarshaldkar/psychiatric_LLM_Project)
-[![Python Version](https://img.shields.io/badge/Python-3.11+-blue?style=flat-square&logo=python)](https://python.org)
-[![Node Version](https://img.shields.io/badge/Node-18+-green?style=flat-square&logo=node.js)](https://nodejs.org)
+MindCare AI is a full-stack, clinical-grade **AI-powered Psychiatric and Mental Health Knowledge Assistant**. It is built specifically to assist medical professionals, clinicians, and researchers in retrieving, comparing, and summarizing mental health guidelines, clinical literature, and uploaded documents with absolute precision and zero-hallucination guardrails.
 
-MindCare AI is a full-stack, enterprise-grade **AI-powered Psychiatric and Mental Health Knowledge Assistant**. It is built specifically to assist medical professionals, clinicians, and researchers in retrieving, comparing, and summarizing mental health guidelines, clinical literature, and uploaded documents with absolute precision and zero-hallucination guardrails.
+Unlike general-purpose chatbots, MindCare AI coordinates specialized runtime sub-systems—**Query Planner, Retrieval Engine, and Prompt Orchestrator**—working together to guarantee clinically safe, factually grounded answers.
 
 ---
 
 ## 📌 Table of Contents
-1. [System Architecture](#-system-architecture)
-2. [Core Capabilities](#-core-capabilities)
-3. [Technology Stack](#-technology-stack)
-4. [Folder Structure](#-folder-structure)
-5. [Setup & Installation](#-setup--installation)
-6. [Testing & Evaluation](#-testing--evaluation)
-7. [Production Readiness & Safety](#-production-readiness--safety)
+1. [MindCare AI vs Generic Chatbots](#-mindcare-ai-vs-generic-chatbots)
+2. [How It Works (Runtime Architecture)](#-how-it-works-runtime-architecture)
+3. [Core Features](#-core-features)
+4. [Technology Stack](#-technology-stack)
+5. [Database Schema](#-database-schema)
+6. [Local Setup & Installation](#-local-setup--installation)
+7. [Clinical Safety & Guardrails](#-clinical-safety--guardrails)
+8. [Frequently Asked Questions (FAQ)](#-frequently-asked-questions-faq)
 
 ---
 
-## 🏗️ System Architecture
+## 📊 MindCare AI vs Generic Chatbots
 
-MindCare AI follows a highly decoupled, asynchronous, and secure request-response pipeline to ensure safety, low latency, and factual grounding:
-
-```
-                  ┌────────────────────────────────────────────────┐
-                  │                React Frontend                  │
-                  │   - Live Capability Badges & Dividers          │
-                  │   - ChatGPT-Style Context & Profile Menus      │
-                  └───────────────────────┬────────────────────────┘
-                                          │ HTTPS / Server-Sent Events (SSE)
-                                          ▼
-                  ┌────────────────────────────────────────────────┐
-                  │                 FastAPI Backend                │
-                  │                                                │
-                  │  ┌──────────────────────────────────────────┐  │
-                  │  │              Security Layer              │  │
-                  │  │  - JWT Authentication                     │  │
-                  │  │  - Injection Guard (6-Attack Taxonomy)   │  │
-                  │  └────────────────────┬─────────────────────┘  │
-                                          │
-                                          ▼
-                  │  ┌──────────────────────────────────────────┐  │
-                  │  │         Dual-Stage Crisis Guard          │  │
-                  │  │  - Educational Query Framing Bypass     │  │
-                  │  │  - 988 Lifeline Emergency Override      │  │
-                  │  └────────────────────┬─────────────────────┘  │
-                                          │
-                                          ▼
-                  │  ┌──────────────────────────────────────────┐  │
-                  │  │      Query Planner & Intent Router       │  │
-                  │  │  - Multi-Intent Token Budget allocation  │  │
-                  │  │  - Dynamic max_tokens context calculator │  │
-                  │  └────────────────────┬─────────────────────┘  │
-                                          │
-                                          ▼
-                  │  ┌──────────────────────────────────────────┐  │
-                  │  │       Async Capability Executor          │  │
-                  │  │  - Parallel asyncio.gather operations    │  │
-                  │  │  - Strict sub-system Timeout Enforcements│  │
-                  │  └────────┬───────────┬───────────┬─────────┘  │
-                              │           │           │
-                              ▼           ▼           ▼
-                  │     ┌───────────┐┌───────────┐┌───────────┐    │
-                  │     │ RAG Search││Web Search ││Memory Recall│    │
-                  │     │ (pgvector)││ (MCP API) ││ (Vector)  │    │
-                  │     └─────┬─────┘└─────┬─────┘└─────┬─────┘    │
-                              │           │           │
-                              └───────────┼───────────┘
-                                          │
-                                          ▼
-                  │  ┌──────────────────────────────────────────┐  │
-                  │  │           Context Builder                │  │
-                  │  │  - Zero-Hallucination Prompt Grounding   │  │
-                  │  │  - Immutable Metadata Citation Injector  │  │
-                  │  └────────────────────┬─────────────────────┘  │
-                                          │
-                                          ▼
-                  │  ┌──────────────────────────────────────────┐  │
-                  │  │      Multi-Provider LLM Router           │  │
-                  │  │  - Automatic Failover (Groq 429 -> local)│  │
-                  │  │  - Output Verification & Evaluation      │  │
-                  │  └──────────────────────────────────────────┘  │
-                  └────────────────────────────────────────────────┘
-```
+| Capability | Generic Chatbots / Simple RAG | MindCare AI |
+| :--- | :---: | :---: |
+| **Domain Scope Lock** | ❌ Swallows general prompts | ✅ Underlined clinical scope guard |
+| **Interactive Source Citations** | ❌ Arbitrary text outputs | ✅ Page-specific, immutable source cards |
+| **Dual-Stage Crisis Safety** | ❌ Generic refusal or standard banner | ✅ Empathic crisis overrides / Academic bypass |
+| **Multi-Provider Resilience** | ❌ Single API dependence | ✅ Automatic failover (Cloud API ➔ Local LLM) |
+| **Context Query Planning** | ❌ Static raw input sending | ✅ Anaphora query rewriting & multi-query splitting |
+| **Dynamic Token Allocation** | ❌ Static prompt chunk count | ✅ Token-based context budgets per intent |
+| **Cross-Session Memory Graph** | ❌ Context-blind session history | ✅ Long-term vector memory consolidation |
+| **Local Offline Voice Capture** | ❌ Third-party cloud transcription | ✅ Local `faster-whisper` STT model |
 
 ---
 
-## 🌟 Core Capabilities
+## 🏛️ How It Works (Runtime Architecture)
 
-*   **⚡ Intent-Driven Query Planner**: Classifies prompts into specialized intents (`fact_lookup`, `clinical_comparison`, `summary`, etc.) and dynamically calculates input context and token budgets.
-*   **📄 High-Fidelity RAG Pipeline**: Ingests PDFs, scanned images, DOCX, and PPTX with metadata extraction, PaddleOCR, semantic chunking, pgvector search, and Cross-Encoder reranking.
-*   **🧠 Cross-Session Memory Graph**: Consolidates short-term session continuity with long-term vector memory extraction and user-controlled deletion.
-*   **🔌 Model Context Protocol (MCP)**: Standardized plugin interface supporting live web search tools and custom document servers.
-*   **🛡️ Injection Guard & Safety Filter**: Blocks prompt leaks, jailbreaks, and persona hijacking via a 6-attack taxonomy guard before LLM inference.
-*   **🏥 Dual-Stage Crisis Guard**: Empathic crisis bypass providing CDC/WHO statistics for educational research queries while triggering immediate **988 Lifeline** overrides for active crisis detection.
-*   **🎨 Premium ChatGPT-Style UI**: Dynamic execution badges, section divider lines, inline chat renaming, share link copies, pinned/archived chats, and profile drawers.
+Every user query flows through a modular, stage-by-stage profiling pipeline to ensure clinical context and prompt safety:
+
+```
+User Query + History
+         │
+         ▼
+┌─────────────────────────────────────────────────────────────┐
+│ 1. QUERY PLANNER                                            │
+│ • Scope check: psychiatric intent vs out-of-scope block     │
+│ • Anaphora Query Rewriting ("its treatment" ➔ MDD treatment)│
+│ • Precision vs. Recall classification (k-candidate rating)  │
+└──────────────────────────────┬──────────────────────────────┘
+                               │
+                               ▼
+┌─────────────────────────────────────────────────────────────┐
+│ 2. RETRIEVAL ENGINE                                         │
+│ • Hybrid Search (Vector + Full-Text Search RRF)            │
+│ • Calibrated Conditional Reranking (Configurable Threshold)│
+│ • Strict Token-Based Context Budgeting (not chunk count)    │
+└──────────────────────────────┬──────────────────────────────┘
+                               │
+                               ▼
+┌─────────────────────────────────────────────────────────────┐
+│ 3. PROMPT ORCHESTRATOR                                      │
+│ • Deep History Sanitization (Scrub past RAG & disclaimers)  │
+│ • Adaptive LLM Parameter Tuning (temperature: 0.1–0.5)      │
+│ • Streaming SSE Response Generation via LLM Router          │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 🧩 1. The Query Planner
+The **Query Planner** classifies user intent and transforms the query before executing search queries:
+*   **Anaphora & Co-reference Resolution**: Rewrites follow-up questions to restore missing subjects. For example, if a user asks *"What are the symptoms of Major Depression?"* and follows up with *"What about its treatment?"*, the Query Planner rewrites the latter to *"What are the treatments for Major Depressive Disorder?"* to retrieve the correct database vectors.
+*   **Precision vs. Recall Tuning**: Dynamically adjusts the retrieval candidate pool size:
+    *   *High-Precision Queries* (*"What is the starting dose of Escitalopram?"*) target a tight pool ($k=10$).
+    *   *High-Recall Queries* (*"Compare exposure-based therapy options across clinical books"*) target a broad candidate pool ($k=35$) with multi-step sub-query splitting.
+
+### ⚡ 2. The Retrieval Engine
+The **Retrieval Engine** manages candidate search and relevance filtering:
+*   **Hybrid Search & Reciprocal Rank Fusion (RRF)**: Merges semantic dense embeddings (vector cosine similarity) with lexical keyword matching (Full-Text Search) for optimal coverage.
+*   **Calibrated Conditional Reranking**: Uses a configurable short-circuit threshold. If a bi-encoder similarity score is above `0.90`, the reranker is bypassed to save ~45ms of CPU latency; otherwise, the candidate set is evaluated by a Cross-Encoder model.
+*   **Token-Based Context Budgeting**: Controls prompt size by counting tokens, not arbitrary chunk numbers. Simple intents receive a tight 800-token context window; comparative intents are allocated up to 2,500 context tokens.
+
+### 🎨 3. The Prompt Orchestrator
+The **Prompt Orchestrator** manages history length, prompt construction, and server-sent events:
+*   **Deep History Sanitization**: Automatically scrubs past retrieved document contexts and repetitive disclaimers from the session log. This reduces prompt payload sizes from **57,000 characters ➔ ~10,000 characters** for fast token generation.
+*   **SSE Token Stream**: Outputs tokens under a unified JSON stream format (`{"type": "token", "text": "..."}`) to prevent client-side parsing hangs.
+
+---
+
+## 🌟 Core Features
+
+*   **🏥 Dual-Stage Safety Override**: Directs crisis inputs (*"I feel hopeless and want to end my life"*) immediately to a deterministic **988 Lifeline** banner. Research inquiries (*"I am writing a paper about suicide prevention statistics"*) bypass emergency overrides to deliver empirical CDC/WHO statistics.
+*   **🛡️ Injection Guard (6-Attack Taxonomy)**: Screens inputs before the LLM call to defend against Jailbreaks, System Prompt Leaks, Persona Hijacking, Instruction Overrides, Control Sequences, and Context Distractions.
+*   **🧠 Multi-Level Memory**: Consolidates short-term session turns with long-term vector graph database memories. Users retain full control and can view or delete memories in the UI.
+*   **🔌 Model Context Protocol (MCP)**: Integrates external search tools (like Tavily) and local document search servers using standardized tool definitions.
+*   **🎙️ Local Whisper Speech-to-Text**: Captures and transcribes microphone input locally on the server using `faster-whisper` for clinical data privacy.
+*   **🎨 Dynamic Markdown Layouts**: Renders glowing horizontal section dividers (`---`), structured header lines, and active capability badges (`📄 Document RAG`, `🌐 Web Search`, `🔌 MCP Tool`, `🧠 Memory Recall`) so responses remain clean and organized.
+*   **🗃️ Conversation Management**: Features list pinning, archiving (accessible through a user profile drawer), sharing, and inline title renaming.
 
 ---
 
 ## 💻 Technology Stack
 
-### Frontend
-*   **Framework**: React (Vite, JS)
-*   **State Management**: Zustand
-*   **Styling**: Vanilla CSS + Tailwind
-*   **Markdown Rendering**: `react-markdown` + `remark-gfm`
-*   **Iconography**: Lucide React
-*   **Build Tool**: Vite
-
-### Backend
-*   **Framework**: FastAPI (Python 3.11+)
-*   **Database & Vector Store**: PostgreSQL / SQLite + pgvector (embeddings)
-*   **Embeddings & Search**: `sentence-transformers` + Cross-Encoder reranking
-*   **OCR & Processing**: PaddleOCR / Tesseract + PyMuPDF
-*   **Local Whisper STT**: `faster-whisper`
-*   **Dependency Tooling**: `uv`
+*   **Frontend**: React (Vite), Zustand state store, `react-markdown` + `remark-gfm` formatting, Lucide icons.
+*   **Backend**: Python 3.11+, FastAPI web framework, `sentence-transformers` embeddings, Cross-Encoder rerankers, PyMuPDF, PaddleOCR, `faster-whisper` local model.
+*   **Database**: PostgreSQL / SQLite + pgvector extension for high-performance approximate nearest neighbor (HNSW) cosine similarity search.
 
 ---
 
-## 📂 Folder Structure
+## 🗄️ Database Schema
 
-```
-psychiatric-ai-assistant/
-├── frontend/                          # React + Tailwind Frontend
-│   ├── src/
-│   │   ├── components/
-│   │   │   ├── Sidebar.jsx            # Chat list, profile menus, archived chats
-│   │   │   ├── ChatWindow.jsx         # Chat layout and input interaction
-│   │   │   └── MessageItem.jsx        # Markdown rendering, dividers, execution badges
-│   │   ├── store/
-│   │   │   └── useStore.js            # Zustand client state
-│   │   └── index.css                  # UI design system CSS variables
-├── backend/                           # FastAPI Backend
-│   ├── app/
-│   │   ├── api/                       # API router endpoints
-│   │   ├── orchestrator/              # Query Planner, safety layer, orchestrator
-│   │   ├── rag/                       # Chunker, embedder, retriever
-│   │   ├── continuity/                # Memory graph consolidation
-│   │   ├── mcp/                       # MCP Client, web search capabilities
-│   │   ├── security/                  # Injection guard, crisis safety checks
-│   │   ├── evaluation/                # Master benchmark testing suite
-│   │   ├── prompts/                   # System prompts
-│   │   └── models/                    # Database models
-│   ├── requirements.txt               # Locked dependencies
-│   └── run.py                         # Startup server script
-├── .gitignore                         # Strict exclude patterns (No md, No tests)
-└── README.md                          # Project overview (This file)
+```sql
+-- conversations table representing chat threads
+CREATE TABLE conversations (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id     UUID REFERENCES users(id) ON DELETE CASCADE,
+    title       VARCHAR NOT NULL,
+    created_at  TIMESTAMP DEFAULT NOW(),
+    updated_at  TIMESTAMP DEFAULT NOW(),
+    summary     TEXT,
+    is_archived BOOLEAN DEFAULT FALSE
+);
+
+-- document_chunks table with pgvector support
+CREATE TABLE document_chunks (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    document_id UUID REFERENCES documents(id) ON DELETE CASCADE,
+    chunk_index INTEGER NOT NULL,
+    content     TEXT NOT NULL,
+    page_number INTEGER,
+    section     VARCHAR,
+    embedding   vector(1536), -- pgvector vector column
+    metadata    JSONB
+);
+CREATE INDEX ON document_chunks USING hnsw (embedding vector_cosine_ops);
 ```
 
 ---
 
-## ⚙️ Setup & Installation
+## ⚙️ Local Setup & Installation
 
-### Backend Setup
+> [!NOTE]
+> To preserve clinical data privacy, automated test suites and evaluation benchmark configurations are maintained in your local environment and excluded from public version control.
+
+### 1. Backend Setup
 1. Navigate to the backend directory:
    ```bash
    cd backend
@@ -168,18 +154,19 @@ psychiatric-ai-assistant/
    ```bash
    pip install -r requirements.txt
    ```
-4. Create a `.env` file from the environment template and specify your API credentials:
+4. Create a local `.env` file from the repository configuration settings:
    ```env
    DATABASE_URL=postgresql://user:pass@localhost:5432/mindcare
    OPENROUTER_API_KEY=your-openrouter-key
    TAVILY_API_KEY=your-tavily-search-key
    ```
-5. Initialize the database and launch the server:
+5. Seed the database with psychiatric reference books and launch:
    ```bash
+   python seed_books.py
    python run.py
    ```
 
-### Frontend Setup
+### 2. Frontend Setup
 1. Navigate to the frontend directory:
    ```bash
    cd ../frontend
@@ -192,29 +179,26 @@ psychiatric-ai-assistant/
    ```bash
    npm run dev
    ```
-4. Open your browser and navigate to `http://localhost:3000`.
+4. Access the web interface at `http://localhost:3000`.
 
 ---
 
-## 🧪 Testing & Evaluation
+## 🏥 Clinical Safety & Guardrails
 
-### Running Automated Test Suites
-Execute all unit and integration test suites covering planner, MCP, security, memory, and orchestration:
-```bash
-python -m pytest tests/test_execution_plan.py tests/test_mcp.py tests/test_security_and_phase5.py tests/test_phase6_master.py
-```
-
-### Running System Evaluation Benchmarks
-Evaluate the RAG, citation, hallucination, and safety accuracy scores against the benchmark suite:
-```bash
-python -m app.evaluation.benchmark
-```
-*Current benchmark results yield a **98% (A+ Grade)** across standard psychiatric test datasets.*
-
----
-
-## 🛡️ Production Readiness & Safety
-
+To prevent medical misinformation, MindCare AI enforces a strict multi-layer defense strategy:
 *   **Immutable Metadata Rule**: Prompts prevent rewrite or alteration of source URLs, DOIs, and titles.
-*   **Dual-Stage Safety Override**: Crisis inputs trigger immediate national hotline banners (988 Lifeline / Crisis Text Line).
 *   **LLM Provider Uptime Fallback**: In the event of cloud rate limits (Groq/OpenAI 429), the LLM Router automatically cascades traffic down to local Ollama instances.
+*   **Supportive Non-Diagnostic Tone**: Configured with a low LLM temperature (`0.1`) to ensure answers are strictly grounded in clinical evidence rather than diagnostic speculation.
+
+---
+
+## 💬 Frequently Asked Questions (FAQ)
+
+#### How is patient data and conversation history kept secure?
+All conversation logs and uploaded documents are bound to your authenticated user ID. They are stored locally on your PostgreSQL database and protected by strict JWT authorization layers.
+
+#### How does the speech-to-text transcribe voice notes locally?
+MindCare AI integrates the `faster-whisper` model directly on the server host. Audio files recorded by the browser's `MediaRecorder` API are sent to the local Whisper instance for CPU/GPU transcription, preventing patient voice leaks to external services.
+
+#### What happens if the primary LLM API key hits a rate limit?
+The backend router automatically monitors connection status codes. If a cloud API provider returns a `429 Too Many Requests` or `402 Insufficient Balance`, the engine redirects the prompt to a secondary provider or your local Ollama instance without terminating the chat.
