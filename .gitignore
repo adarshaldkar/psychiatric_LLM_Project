@@ -38,6 +38,8 @@ htmlcov/
 chroma_db/
 chromadb/
 data/
+backend/uploads/
+uploads/
 
 # OS metadata
 .DS_Store
