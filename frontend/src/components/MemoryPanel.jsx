@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react"
 import { Brain, Trash2, Pin, Info, X, ShieldAlert } from "lucide-react"
 
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000"
+
 export default function MemoryPanel({ isOpen, onClose }) {
   const [memories, setMemories] = useState([])
   const [loading, setLoading] = useState(false)
@@ -14,10 +16,10 @@ export default function MemoryPanel({ isOpen, onClose }) {
 
   const fetchMemories = async () => {
     setLoading(true)
-    console.log("[MEMORY UI] Opening MemoryPanel modal, requesting http://localhost:8000/api/memory/long-term...")
+    console.log("[MEMORY UI] Fetching long-term memories...")
     try {
       const token = localStorage.getItem("mindcare_token")
-      const res = await fetch(`http://localhost:8000/api/memory/long-term?t=${Date.now()}`, {
+      const res = await fetch(`${API_BASE}/api/memory/long-term?t=${Date.now()}`, {
         headers: { Authorization: `Bearer ${token}` },
         cache: "no-cache"
       })
@@ -41,7 +43,7 @@ export default function MemoryPanel({ isOpen, onClose }) {
   const handleDelete = async (id) => {
     try {
       const token = localStorage.getItem("mindcare_token")
-      const res = await fetch(`http://localhost:8000/api/memory/long-term/${id}`, {
+      const res = await fetch(`${API_BASE}/api/memory/long-term/${id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` }
       })

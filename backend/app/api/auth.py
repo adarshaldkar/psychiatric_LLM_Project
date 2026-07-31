@@ -5,9 +5,16 @@ from app.models.models import User
 from app.schemas.schemas import UserRegister, UserLogin, TokenResponse, UserResponse
 from app.core.security import hash_password, verify_password, create_access_token, decode_access_token
 from fastapi.security import OAuth2PasswordBearer
+import logging
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/auth", tags=["Auth"])
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
+
+# Password policy constants
+_MIN_PASSWORD_LEN = 8
+_MAX_PASSWORD_LEN = 128  # Prevents bcrypt DoS (bcrypt truncates at 72, huge inputs are wasteful)
+_MAX_EMAIL_LEN = 255
 
 def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> User:
     user_id = decode_access_token(token)
@@ -20,10 +27,29 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
 
 @router.post("/register", response_model=TokenResponse)
 def register(user_in: UserRegister, db: Session = Depends(get_db)):
+    # ── Input validation ────────────────────────────────────────────────────
+    if len(user_in.email) > _MAX_EMAIL_LEN:
+        raise HTTPException(status_code=400, detail="Email address too long")
+    if len(user_in.password) < _MIN_PASSWORD_LEN:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Password must be at least {_MIN_PASSWORD_LEN} characters"
+        )
+    if len(user_in.password) > _MAX_PASSWORD_LEN:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Password must not exceed {_MAX_PASSWORD_LEN} characters"
+        )
+    if len(user_in.password) > 72:
+        logger.warning(
+            f"Register: password exceeds 72 chars — bcrypt will silently truncate. "
+            f"User email: {user_in.email[:20]}..."
+        )
+
     existing = db.query(User).filter(User.email == user_in.email).first()
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
-    
+
     user = User(
         email=user_in.email,
         password_hash=hash_password(user_in.password),

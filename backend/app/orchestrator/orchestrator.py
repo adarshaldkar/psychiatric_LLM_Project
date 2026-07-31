@@ -171,7 +171,15 @@ class AIOrchestrator:
             score_pct = f"{rag_result.best_score:.0%}" if rag_result.best_score else "High"
             yield json.dumps({"type": "status", "text": f"Generating grounded response (Relevance: {score_pct})..."}) + "\n"
         else:
-            system_content = self.system_prompt + continuity_context
+            fallback_disclaimer = (
+                "\n\n============================================================\n"
+                "KNOWLEDGE BASE RETRIEVAL NOTICE:\n"
+                "No relevant document sections were found in the uploaded knowledge base for this specific query.\n"
+                "You MUST begin your answer with this explicit single-line italicized disclaimer:\n"
+                "'*Notice: No matching sections were found in your uploaded documents. The following response is based on general knowledge:*'\n"
+                "============================================================"
+            )
+            system_content = self.system_prompt + continuity_context + fallback_disclaimer
             if rag_result.message:
                 yield json.dumps({"type": "status", "text": f"Notice: {rag_result.message} Answering from general knowledge..."}) + "\n"
             else:

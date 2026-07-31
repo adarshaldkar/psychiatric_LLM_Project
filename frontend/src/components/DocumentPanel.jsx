@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from "react"
 import { useStore } from "../store/useStore"
 
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000"
+
 const STATUS_DOT_COLOR = {
   ready:      "#10b981",
   chat_ready: "#f59e0b",
@@ -101,7 +103,7 @@ export default function DocumentPanel({ isOpen, onClose }) {
 
   const fetchDocuments = async () => {
     try {
-      const res = await fetch("http://localhost:8000/api/documents", {
+      const res = await fetch(`${API_BASE}/api/documents`, {
         headers: { Authorization: `Bearer ${token}` }
       })
       if (res.status === 401) {
@@ -162,7 +164,7 @@ export default function DocumentPanel({ isOpen, onClose }) {
     if (tags)   formData.append("tags", tags)
 
     try {
-      const res = await fetch("http://localhost:8000/api/documents/upload", {
+      const res = await fetch(`${API_BASE}/api/documents/upload`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: formData
@@ -199,7 +201,7 @@ export default function DocumentPanel({ isOpen, onClose }) {
     console.log("[DocumentPanel] Deleting document:", docId)
 
     try {
-      const res = await fetch(`http://localhost:8000/api/documents/${docId}`, {
+      const res = await fetch(`${API_BASE}/api/documents/${docId}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` }
       })

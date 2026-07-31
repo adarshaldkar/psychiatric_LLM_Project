@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useState, useCallback } from "react"
 import { useStore } from "../store/useStore"
+import { transcribeAudio, getVoiceStatus } from "../api/chat"
 
 /* ── Icons ───────────────────────────────────────────────────────── */
 const PlusIcon = () => (
@@ -50,15 +51,30 @@ export default function InputBar({ onSend, onOpenDocuments }) {
   const [text, setText] = useState("")
   const [isRecording, setIsRecording] = useState(false)
   const [micAvailable, setMicAvailable] = useState(false)
+  const [serverSTTAvailable, setServerSTTAvailable] = useState(false)
+  const [useServerSTT, setUseServerSTT] = useState(false)  // prefer server STT if available
+  const [isTranscribing, setIsTranscribing] = useState(false) // server transcription in progress
   const { isStreaming } = useStore()
   const textareaRef = useRef(null)
   const recognitionRef = useRef(null)
+  const mediaRecorderRef = useRef(null)
+  const audioChunksRef = useRef([])
   const maxRows = 5
 
-  /* Check mic availability */
+  /* Check mic availability & server STT status */
   useEffect(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
-    setMicAvailable(!!SpeechRecognition)
+    const browserSTT = !!SpeechRecognition
+    const mediaRecorderOk = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)
+    setMicAvailable(browserSTT || mediaRecorderOk)
+
+    // Check if faster-whisper backend is live
+    getVoiceStatus().then(({ available }) => {
+      setServerSTTAvailable(available)
+      if (available && mediaRecorderOk) {
+        setUseServerSTT(true)  // prefer server STT when both available
+      }
+    }).catch(() => {})
   }, [])
 
   /* Auto-resize textarea */
@@ -86,8 +102,77 @@ export default function InputBar({ onSend, onOpenDocuments }) {
     }
   }
 
-  /* Mic toggle using Web Speech API */
+  /* Server STT: record audio via MediaRecorder → POST to faster-whisper */
+  const startServerSTT = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      audioChunksRef.current = []
+
+      // Prefer WebM (best for web), fallback to mp4
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+        ? 'audio/webm;codecs=opus'
+        : 'audio/mp4'
+      const ext = mimeType.startsWith('audio/webm') ? 'webm' : 'mp4'
+
+      const recorder = new MediaRecorder(stream, { mimeType })
+      mediaRecorderRef.current = recorder
+
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data)
+      }
+
+      recorder.onstop = async () => {
+        stream.getTracks().forEach(t => t.stop())  // release mic
+        setIsRecording(false)
+
+        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType })
+        if (audioBlob.size < 100) return  // too small, ignore
+
+        setIsTranscribing(true)
+        try {
+          const result = await transcribeAudio(audioBlob, ext)
+          if (result.transcript) {
+            setText(result.transcript)
+            // Auto-send after a brief display delay
+            setTimeout(() => {
+              if (result.transcript.trim()) {
+                onSend(result.transcript.trim())
+                setText("")
+              }
+            }, 400)
+          }
+        } catch (err) {
+          console.warn("Server STT failed, transcript empty:", err)
+        } finally {
+          setIsTranscribing(false)
+        }
+      }
+
+      recorder.start()
+      setIsRecording(true)
+    } catch (err) {
+      console.warn("Microphone access denied:", err)
+      setIsRecording(false)
+    }
+  }, [onSend])
+
+  const stopServerSTT = useCallback(() => {
+    mediaRecorderRef.current?.stop()
+  }, [])
+
+  /* Browser STT toggle using Web Speech API */
   const toggleMic = useCallback(() => {
+    // Use server STT if available
+    if (useServerSTT && serverSTTAvailable) {
+      if (isRecording) {
+        stopServerSTT()
+      } else {
+        startServerSTT()
+      }
+      return
+    }
+
+    // Fallback to browser Web Speech API
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
     if (!SpeechRecognition) return
 
@@ -306,11 +391,13 @@ export default function InputBar({ onSend, onOpenDocuments }) {
           </div>
         </div>
 
-        {/* Sub-hint */}
+          {/* Sub-hint */}
         <p style={{ textAlign: "center", fontSize: 11, color: "var(--text-muted)", marginTop: 10, letterSpacing: "0.01em" }}>
-          {isRecording
-            ? "🔴 Recording… speak now, auto-sends when done"
-            : "Enter to send · Shift+Enter for new line · Emergencies: call 112 / 988"
+          {isTranscribing
+            ? "⏳ Transcribing via Whisper AI…"
+            : isRecording
+              ? (useServerSTT ? "🔴 Recording… release mic to auto-transcribe" : "🔴 Recording… speak now, auto-sends when done")
+              : "Enter to send · Shift+Enter for new line · Emergencies: call 112 / 988"
           }
         </p>
       </div>

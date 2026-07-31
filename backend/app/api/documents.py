@@ -254,3 +254,76 @@ def delete_document(
     db.delete(doc)
     db.commit()
     logger.info(f"Document deleted: {document_id} by user {current_user.id}")
+
+
+@router.get('/{document_id}/page/{page_number}')
+def get_document_page(
+    document_id: str,
+    page_number: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    MCP Tool: get_document_page
+    Retrieve the full aggregated text of a specific page from an uploaded document.
+    Used by the MCP layer when the AI needs to read a complete page in context.
+    """
+    try:
+        doc_uuid = uuid.UUID(document_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid document ID")
+
+    doc = db.query(Document).filter(Document.id == doc_uuid).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    # Access control: must be owner or global document
+    if doc.user_id != current_user.id and not doc.is_global:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    if page_number < 1:
+        raise HTTPException(status_code=400, detail="Page number must be >= 1")
+
+    # Fetch all parent chunks on this page (parents contain the richer context)
+    chunks = (
+        db.query(DocumentChunk)
+        .filter(
+            DocumentChunk.document_id == doc_uuid,
+            DocumentChunk.page_number == page_number,
+            DocumentChunk.chunk_type == 'parent'
+        )
+        .order_by(DocumentChunk.chunk_index)
+        .all()
+    )
+
+    # Fallback: if no parent chunks, try child chunks
+    if not chunks:
+        chunks = (
+            db.query(DocumentChunk)
+            .filter(
+                DocumentChunk.document_id == doc_uuid,
+                DocumentChunk.page_number == page_number,
+            )
+            .order_by(DocumentChunk.chunk_index)
+            .all()
+        )
+
+    if not chunks:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Page {page_number} not found in document '{doc.original_name}'"
+        )
+
+    # Aggregate page text from all chunks on that page
+    page_text = "\n\n".join(c.chunk_text for c in chunks if c.chunk_text)
+    section = chunks[0].section if chunks else None
+
+    return {
+        "document_id": str(doc.id),
+        "document_name": doc.original_name,
+        "page_number": page_number,
+        "section": section,
+        "page_text": page_text,
+        "chunk_count": len(chunks),
+        "token_estimate": sum(c.token_count or 0 for c in chunks),
+    }

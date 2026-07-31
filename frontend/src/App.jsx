@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react"
+import React, { useEffect, useState, useCallback } from "react"
+import { Routes, Route, Navigate, useNavigate, useParams } from "react-router-dom"
 import { useStore } from "./store/useStore"
 import Sidebar from "./components/Sidebar"
 import ChatWindow from "./components/ChatWindow"
@@ -9,7 +10,11 @@ import MemoryPanel from "./components/MemoryPanel"
 import { getConversations, createConversation, getConversationDetail, deleteConversation } from "./api/conversations"
 import { sendMessageStream } from "./api/chat"
 
-export default function App() {
+// ── Inner layout component (receives route params) ───────────────────────────
+function ChatLayout() {
+  const { convId } = useParams()   // from /chat/:convId
+  const navigate = useNavigate()
+
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [documentsOpen, setDocumentsOpen] = useState(false)
   const [memoryOpen, setMemoryOpen] = useState(false)
@@ -27,31 +32,44 @@ export default function App() {
     setIsStreaming,
     setStreamingStatus,
     addConversation,
-    removeConversation
+    removeConversation,
   } = useStore()
 
+  // Load conversations list on mount / login
   useEffect(() => {
-    if (token) {
-      getConversations()
-        .then((data) => {
-          setConversations(data)
-          if (data.length > 0 && !currentConversationId) {
-            handleSelectConversation(data[0].id)
-          }
-        })
-        .catch((err) => console.error("Failed to load conversations:", err))
-    }
+    if (!token) return
+    getConversations()
+      .then((data) => {
+        setConversations(data)
+        // If a specific conv is in the URL, load it
+        if (convId) {
+          handleSelectConversation(convId)
+        } else if (data.length > 0) {
+          // Default: open most recent conversation
+          handleSelectConversation(data[0].id)
+          navigate(`/chat/${data[0].id}`, { replace: true })
+        }
+      })
+      .catch((err) => console.error("Failed to load conversations:", err))
   }, [token])
 
-  const handleSelectConversation = async (convId) => {
-    setCurrentConversationId(convId)
+  // If convId URL param changes (browser back/forward), load it
+  useEffect(() => {
+    if (convId && token && convId !== currentConversationId) {
+      handleSelectConversation(convId)
+    }
+  }, [convId])
+
+  const handleSelectConversation = useCallback(async (selectedId) => {
+    setCurrentConversationId(selectedId)
+    navigate(`/chat/${selectedId}`, { replace: false })
     try {
-      const detail = await getConversationDetail(convId)
+      const detail = await getConversationDetail(selectedId)
       setMessages(detail.messages || [])
     } catch (err) {
       console.error("Failed to load conversation details:", err)
     }
-  }
+  }, [navigate, setCurrentConversationId, setMessages])
 
   const handleNewChat = async () => {
     try {
@@ -59,18 +77,20 @@ export default function App() {
       addConversation(newConv)
       setCurrentConversationId(newConv.id)
       setMessages([])
+      navigate(`/chat/${newConv.id}`)
     } catch (err) {
       console.error("Failed to create conversation:", err)
     }
   }
 
-  const handleDeleteConversation = async (convId) => {
+  const handleDeleteConversation = async (id) => {
     try {
-      await deleteConversation(convId)
-      removeConversation(convId)
-      if (currentConversationId === convId) {
+      await deleteConversation(id)
+      removeConversation(id)
+      if (currentConversationId === id) {
         setCurrentConversationId(null)
         setMessages([])
+        navigate("/chat", { replace: true })
       }
     } catch (err) {
       console.error("Failed to delete conversation:", err)
@@ -87,6 +107,7 @@ export default function App() {
         addConversation(newConv)
         setCurrentConversationId(newConv.id)
         activeConvId = newConv.id
+        navigate(`/chat/${newConv.id}`)
       } catch (err) {
         console.error("Failed to create conversation:", err)
         return
@@ -159,5 +180,22 @@ export default function App() {
         <InputBar onSend={handleSendMessage} onOpenDocuments={() => setDocumentsOpen(true)} />
       </main>
     </div>
+  )
+}
+
+// ── Root App with React Router routes ────────────────────────────────────────
+export default function App() {
+  return (
+    <Routes>
+      {/* Redirect root → /chat */}
+      <Route path="/" element={<Navigate to="/chat" replace />} />
+
+      {/* Main chat view — with optional conversation ID in URL */}
+      <Route path="/chat" element={<ChatLayout />} />
+      <Route path="/chat/:convId" element={<ChatLayout />} />
+
+      {/* Catch-all: unknown paths redirect to /chat */}
+      <Route path="*" element={<Navigate to="/chat" replace />} />
+    </Routes>
   )
 }

@@ -59,9 +59,38 @@ class Settings(BaseSettings):
     RETRY_WAIT_MIN: int = 1
     RETRY_WAIT_MAX: int = 10
 
+    # ── Security — CORS ─────────────────────────────────────
+    # Comma-separated allowed origins. Override in .env for production.
+    ALLOWED_ORIGINS: str = 'http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173'
+
+    # ── Voice STT ────────────────────────────────────────────
+    WHISPER_MODEL: str = 'base'  # Options: tiny, base, small, medium, large
+    WHISPER_LANGUAGE: str = 'en'
+
+    # ── Rate Limiting ────────────────────────────────────────
+    RATE_LIMIT_AUTH: str = '5/minute'    # login / register
+    RATE_LIMIT_CHAT: str = '30/minute'   # chat messages
+    RATE_LIMIT_UPLOAD: str = '10/minute' # document uploads
+
+    def get_allowed_origins(self) -> list[str]:
+        """Returns parsed list of CORS allowed origins."""
+        return [o.strip() for o in self.ALLOWED_ORIGINS.split(',') if o.strip()]
+
     class Config:
         env_file = '.env'
         env_file_encoding = 'utf-8'
         extra = 'ignore'
 
 settings = Settings()
+
+# ── Startup security validation ───────────────────────────────────────────────
+import logging as _logging
+_log = _logging.getLogger(__name__)
+
+if settings.JWT_SECRET in ('default_secret', 'secret', 'changeme', ''):
+    _log.critical(
+        "SECURITY WARNING: JWT_SECRET is set to an insecure default value '%s'. "
+        "Set a strong random secret in .env: "
+        "JWT_SECRET=$(python -c \"import secrets; print(secrets.token_hex(32))\")",
+        settings.JWT_SECRET
+    )

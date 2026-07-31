@@ -186,7 +186,9 @@ def retrieve(
 
     # ── Step 6: Confidence gate ───────────────────────────────────────────────
     best_score = scored_candidates[0][1] if scored_candidates else 0.0
-    if not scored_candidates or best_score < settings.CONFIDENCE_THRESHOLD:
+    # Secondary cutoff (0.40) allows partial textbook keyword matches to still be retrieved
+    MIN_FALLBACK_THRESHOLD = 0.40
+    if not scored_candidates or best_score < MIN_FALLBACK_THRESHOLD:
         telemetry["retrieval_total_ms"] = round((time.perf_counter() - t_start) * 1000, 1)
         return RetrievalResult(
             success=False,
@@ -195,8 +197,8 @@ def retrieve(
             chunks_found=len(candidates),
             bypassed_reranker=bypassed_reranker,
             message=(
-                f"Related content was found, but the relevance score ({best_score:.0%}) "
-                f"is below the confidence threshold ({settings.CONFIDENCE_THRESHOLD:.0%})."
+                f"No relevant content found in knowledge base (relevance score {best_score:.0%} "
+                f"below minimum threshold {MIN_FALLBACK_THRESHOLD:.0%})."
             ),
             telemetry=telemetry
         )

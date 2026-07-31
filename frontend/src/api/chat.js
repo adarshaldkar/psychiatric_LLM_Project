@@ -1,19 +1,81 @@
-import { useStore } from "../store/useStore"
+/**
+ * Centralized API client module.
+ * 
+ * Uses VITE_API_URL environment variable for the backend base URL.
+ * Set in frontend/.env:  VITE_API_URL=http://localhost:8000
+ * Default fallback:      http://localhost:8000  (dev only)
+ */
 
-export const sendMessageStream = async (content, conversationId, onStatus, onToken, onCitations, onDone, onError) => {
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000"
+
+/**
+ * Get Authorization headers using JWT token from Zustand store.
+ * Imported lazily to avoid circular dependencies.
+ */
+const getAuthHeaders = () => {
+  // Import lazily to avoid circular dependency
+  const { useStore } = require("../store/useStore")
+  const token = useStore.getState().token
+  return {
+    "Content-Type": "application/json",
+    ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+  }
+}
+
+/**
+ * Generic authenticated fetch helper.
+ * Throws on non-2xx responses with a descriptive error message.
+ */
+export const apiFetch = async (path, options = {}) => {
+  const { useStore } = await import("../store/useStore")
+  const token = useStore.getState().token
+
+  const response = await fetch(`${API_BASE}${path}`, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+      ...(options.headers || {}),
+    },
+  })
+
+  if (!response.ok) {
+    const errText = await response.text().catch(() => "Unknown error")
+    throw new Error(`API Error ${response.status}: ${errText}`)
+  }
+
+  // Return null for 204 No Content
+  if (response.status === 204) return null
+  return response.json()
+}
+
+/**
+ * Streaming chat message sender.
+ * Calls POST /api/chat/message and consumes the SSE token stream.
+ */
+export const sendMessageStream = async (
+  content,
+  conversationId,
+  onStatus,
+  onToken,
+  onCitations,
+  onDone,
+  onError
+) => {
+  const { useStore } = await import("../store/useStore")
   const token = useStore.getState().token
 
   try {
-    const response = await fetch("http://localhost:8000/api/chat/message", {
+    const response = await fetch(`${API_BASE}/api/chat/message`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`
+        "Authorization": `Bearer ${token}`,
       },
       body: JSON.stringify({
         conversation_id: conversationId,
-        content: content
-      })
+        content: content,
+      }),
     })
 
     if (!response.ok) {
@@ -48,7 +110,7 @@ export const sendMessageStream = async (content, conversationId, onStatus, onTok
             onDone && onDone()
           }
         } catch (e) {
-          console.warn("Parse error:", e, line)
+          console.warn("Stream parse error:", e, line)
         }
       }
     }
@@ -56,3 +118,53 @@ export const sendMessageStream = async (content, conversationId, onStatus, onTok
     onError && onError(err.message || "Failed to communicate with AI service")
   }
 }
+
+/**
+ * Transcribe audio using the faster-whisper backend STT endpoint.
+ * @param {Blob} audioBlob - Raw audio blob from MediaRecorder
+ * @param {string} ext - File extension: 'webm', 'wav', 'mp4', etc.
+ * @returns {Promise<{transcript: string, language: string, duration_s: number}>}
+ */
+export const transcribeAudio = async (audioBlob, ext = "webm") => {
+  const { useStore } = await import("../store/useStore")
+  const token = useStore.getState().token
+
+  const formData = new FormData()
+  formData.append("file", audioBlob, `recording.${ext}`)
+
+  const response = await fetch(`${API_BASE}/api/voice/transcribe`, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      // NOTE: Do NOT set Content-Type here — browser sets multipart boundary automatically
+    },
+    body: formData,
+  })
+
+  if (!response.ok) {
+    const errText = await response.text().catch(() => "Transcription failed")
+    throw new Error(`STT Error ${response.status}: ${errText}`)
+  }
+
+  return response.json()
+}
+
+/**
+ * Check if the faster-whisper backend is available.
+ * @returns {Promise<{available: boolean, model: string, loaded: boolean}>}
+ */
+export const getVoiceStatus = async () => {
+  try {
+    const { useStore } = await import("../store/useStore")
+    const token = useStore.getState().token
+    const response = await fetch(`${API_BASE}/api/voice/status`, {
+      headers: { "Authorization": `Bearer ${token}` }
+    })
+    if (!response.ok) return { available: false }
+    return response.json()
+  } catch {
+    return { available: false }
+  }
+}
+
+export { API_BASE }
