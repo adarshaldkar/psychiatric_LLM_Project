@@ -49,8 +49,12 @@ function ChatLayout() {
     openAuthModal,
   } = useStore()
 
-  // 1. Initial Guest Session Auto-Provisioning
+  // 1. Initial Guest Session Auto-Provisioning (only for fresh visitors whose trial hasn't expired)
   useEffect(() => {
+    if (guestTrialExpired) {
+      openAuthModal("trial_expired")
+      return
+    }
     if (!token) {
       createGuestSession()
         .then((data) => {
@@ -61,7 +65,7 @@ function ChatLayout() {
           openAuthModal("manual")
         })
     }
-  }, [token, setGuestAuth, openAuthModal])
+  }, [token, guestTrialExpired, setGuestAuth, openAuthModal])
 
   // 2. Guest Trial Timer (3 minutes limit)
   useEffect(() => {

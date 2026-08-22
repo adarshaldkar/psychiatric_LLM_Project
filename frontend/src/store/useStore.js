@@ -1,15 +1,16 @@
 import { create } from "zustand"
 
 const savedUser = JSON.parse(localStorage.getItem("mindcare_user") || "null")
+const isGuestExpired = localStorage.getItem("mindcare_guest_expired") === "true"
 
 export const useStore = create((set, get) => ({
   token: localStorage.getItem("mindcare_token") || null,
   user: savedUser,
   isGuest: Boolean(savedUser?.is_guest),
   guestMessageCount: parseInt(localStorage.getItem("mindcare_guest_msg_count") || "0", 10),
-  guestTrialExpired: localStorage.getItem("mindcare_guest_expired") === "true",
-  showAuthModal: false,
-  authModalReason: "manual", // "manual" | "trial_expired" | "feature_locked"
+  guestTrialExpired: isGuestExpired,
+  showAuthModal: isGuestExpired,
+  authModalReason: isGuestExpired ? "trial_expired" : "manual", // "manual" | "trial_expired" | "feature_locked"
 
   setAuth: (token, user) => {
     localStorage.setItem("mindcare_token", token)
