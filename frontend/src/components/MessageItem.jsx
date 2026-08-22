@@ -71,43 +71,55 @@ export default function MessageItem({ message, isStreaming }) {
           )}
         </div>
         <div className="markdown-body">
-          <ReactMarkdown
-            remarkPlugins={[remarkGfm]}
-            components={{
-              hr: ({ node, ...props }) => (
-                <hr style={{ border: "none", height: "1px", background: "rgba(255, 255, 255, 0.12)", margin: "22px 0" }} {...props} />
-              ),
-              h2: ({ node, ...props }) => (
-                <div style={{ marginTop: 22, marginBottom: 12, paddingBottom: 8, borderBottom: "1px solid rgba(255,255,255,0.12)" }}>
-                  <h2 style={{ fontSize: "1.12rem", fontWeight: 700, color: "#f3f4f6", margin: 0, letterSpacing: "-0.01em" }} {...props} />
-                </div>
-              ),
-              h3: ({ node, ...props }) => (
-                <div style={{ marginTop: 18, marginBottom: 10, paddingBottom: 6, borderBottom: "1px dashed rgba(255,255,255,0.09)" }}>
-                  <h3 style={{ fontSize: "0.98rem", fontWeight: 600, color: "#e5e7eb", margin: 0 }} {...props} />
-                </div>
-              ),
-              table: ({ node, ...props }) => (
-                <div className="table-wrapper">
-                  <table {...props} />
-                </div>
-              ),
-              code: ({ node, inline, children, ...props }) => {
-                const text = String(children)
-                if (text.startsWith("📖 Source:")) {
-                  return (
-                    <span className="inline-source-tag">
-                      {text}
-                    </span>
-                  )
+          {formattedContent ? (
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              components={{
+                hr: ({ node, ...props }) => (
+                  <hr style={{ border: "none", height: "1px", background: "rgba(255, 255, 255, 0.12)", margin: "22px 0" }} {...props} />
+                ),
+                h2: ({ node, ...props }) => (
+                  <div style={{ marginTop: 22, marginBottom: 12, paddingBottom: 8, borderBottom: "1px solid rgba(255,255,255,0.12)" }}>
+                    <h2 style={{ fontSize: "1.12rem", fontWeight: 700, color: "#f3f4f6", margin: 0, letterSpacing: "-0.01em" }} {...props} />
+                  </div>
+                ),
+                h3: ({ node, ...props }) => (
+                  <div style={{ marginTop: 18, marginBottom: 10, paddingBottom: 6, borderBottom: "1px dashed rgba(255,255,255,0.09)" }}>
+                    <h3 style={{ fontSize: "0.98rem", fontWeight: 600, color: "#e5e7eb", margin: 0 }} {...props} />
+                  </div>
+                ),
+                table: ({ node, ...props }) => (
+                  <div className="table-wrapper">
+                    <table {...props} />
+                  </div>
+                ),
+                code: ({ node, inline, children, ...props }) => {
+                  const text = String(children)
+                  if (text.startsWith("📖 Source:")) {
+                    return (
+                      <span className="inline-source-tag">
+                        {text}
+                      </span>
+                    )
+                  }
+                  return <code {...props}>{children}</code>
                 }
-                return <code {...props}>{children}</code>
-              }
-            }}
-          >
-            {formattedContent}
-          </ReactMarkdown>
-          {isStreaming && <span className="cursor-blink" />}
+              }}
+            >
+              {formattedContent}
+            </ReactMarkdown>
+          ) : isStreaming ? (
+            <div style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--text-secondary)", fontSize: 14 }}>
+              <div className="pulse-dot" style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--accent)" }} />
+              <span>Formulating response...</span>
+              <span className="cursor-blink" />
+            </div>
+          ) : (
+            <div style={{ color: "var(--text-muted)", fontSize: 13, fontStyle: "italic" }}>
+              (No response received)
+            </div>
+          )}
+          {formattedContent && isStreaming && <span className="cursor-blink" />}
         </div>
 
         {/* Citations section */}

@@ -53,27 +53,28 @@ class AIOrchestrator:
         user_id: str,
         db: Session
     ) -> AsyncGenerator[str, None]:
-        t_start = time.perf_counter()
-        time_asked = datetime.now().strftime("%H:%M:%S.%f")[:-3]
-        print(f"\n[TIMING {time_asked}] 📥 USER ASKED QUESTION: '{user_message[:70]}...'", flush=True)
-        print(f"📜 [SYSTEM PROMPT VERIFIED] Loaded SYSTEM_PROMPT.md ({len(self.system_prompt):,} characters | v1.1 Master System Prompt)", flush=True)
+        try:
+            t_start = time.perf_counter()
+            time_asked = datetime.now().strftime("%H:%M:%S.%f")[:-3]
+            print(f"\n[TIMING {time_asked}] 📥 USER ASKED QUESTION: '{user_message[:70]}...'", flush=True)
+            print(f"📜 [SYSTEM PROMPT VERIFIED] Loaded SYSTEM_PROMPT.md ({len(self.system_prompt):,} characters | v1.1 Master System Prompt)", flush=True)
 
-        # ── Step 0: Dual-Stage Clinical Safety & Crisis Override ─────────────
-        from app.security.crisis_guard import crisis_guard
-        crisis_res = crisis_guard.evaluate_prompt(user_message)
-        if crisis_res.is_crisis and crisis_res.override_message:
-            print(f"[ORCHESTRATOR] 🚨 CRISIS SAFETY OVERRIDE TRIGGERED for conversation '{conversation_id}'", flush=True)
-            yield json.dumps({"type": "token", "text": crisis_res.override_message}) + "\n"
-            yield json.dumps({"type": "done"}) + "\n"
-            return
+            # ── Step 0: Dual-Stage Clinical Safety & Crisis Override ─────────────
+            from app.security.crisis_guard import crisis_guard
+            crisis_res = crisis_guard.evaluate_prompt(user_message)
+            if crisis_res.is_crisis and crisis_res.override_message:
+                print(f"[ORCHESTRATOR] 🚨 CRISIS SAFETY OVERRIDE TRIGGERED for conversation '{conversation_id}'", flush=True)
+                yield json.dumps({"type": "token", "text": crisis_res.override_message}) + "\n"
+                yield json.dumps({"type": "done"}) + "\n"
+                return
 
-        # ── Step 1: Fetch conversation history ─────────────────────────
-        past_messages = (
-            db.query(Message)
-            .filter(Message.conversation_id == conversation_id)
-            .order_by(Message.created_at.asc())
-            .all()
-        )
+            # ── Step 1: Fetch conversation history ─────────────────────────
+            past_messages = (
+                db.query(Message)
+                .filter(Message.conversation_id == conversation_id)
+                .order_by(Message.created_at.asc())
+                .all()
+            )
 
         # ── Step 2: Query Planner ──────────────────────────────────────
         t0 = time.perf_counter()
@@ -310,6 +311,11 @@ class AIOrchestrator:
         if citations_data:
             yield json.dumps({"type": "citations", "data": citations_data}) + "\n"
 
+        yield json.dumps({"type": "done"}) + "\n"
+    except Exception as e:
+        logger.exception(f"Unhandled error in process_chat_message: {e}")
+        err_msg = str(e).encode('ascii', errors='ignore').decode()
+        yield json.dumps({"type": "token", "text": f"\n\n⚠️ An error occurred: {err_msg}"}) + "\n"
         yield json.dumps({"type": "done"}) + "\n"
 
 

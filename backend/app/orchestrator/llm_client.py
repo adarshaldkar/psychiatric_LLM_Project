@@ -52,7 +52,7 @@ def _sanitize_token(content: str) -> str:
 class GeminiClient:
     def __init__(self):
         self.api_key = settings.GOOGLE_API_KEY
-        self.model = "gemini-2.0-flash"
+        self.model = "gemini-3.6-flash"
         self.base_url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:streamGenerateContent"
 
     def _messages_to_gemini(self, messages: List[Dict]) -> tuple:
@@ -355,12 +355,12 @@ class OpenAIClient:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# Provider 6: Groq — Ultra High Speed (llama-3.3-70b-versatile)
+# Provider 6: Groq — Ultra High Speed (openai/gpt-oss-120b & qwen3.6)
 # ══════════════════════════════════════════════════════════════════════════════
 class GroqClient:
     def __init__(self):
         self.api_key = settings.GROQ_API_KEY
-        self.model = "llama-3.3-70b-versatile"
+        self.model = "openai/gpt-oss-120b"
         self.base_url = "https://api.groq.com/openai/v1/chat/completions"
 
     async def stream_chat(
@@ -373,35 +373,55 @@ class GroqClient:
         if not self.api_key or not self.api_key.startswith("gsk_"):
             raise ValueError("GROQ_API_KEY must start with 'gsk_'.")
 
+        models_to_try = [model] if model else [self.model, "openai/gpt-oss-20b", "qwen/qwen3.6-27b"]
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json"
         }
-        payload = {
-            "model": model or self.model,
-            "messages": messages,
-            "temperature": temperature,
-            "max_tokens": max_tokens,
-            "stream": True
-        }
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            async with client.stream("POST", self.base_url, headers=headers, json=payload) as response:
-                if response.status_code != 200:
-                    error_text = await response.aread()
-                    raise RuntimeError(f"Groq {response.status_code}: {error_text.decode()[:200]}")
 
-                async for line in response.aiter_lines():
-                    if line.startswith("data: "):
-                        line_data = line[6:].strip()
-                        if line_data == "[DONE]":
-                            break
-                        try:
-                            chunk = json.loads(line_data)
-                            content = chunk.get("choices", [{}])[0].get("delta", {}).get("content", "")
-                            if content:
-                                yield _sanitize_token(content)
-                        except json.JSONDecodeError:
+        last_err = None
+        for m in models_to_try:
+            try:
+                payload = {
+                    "model": m,
+                    "messages": messages,
+                    "temperature": temperature,
+                    "max_tokens": max_tokens,
+                    "stream": True
+                }
+                async with httpx.AsyncClient(timeout=60.0) as client:
+                    async with client.stream("POST", self.base_url, headers=headers, json=payload) as response:
+                        if response.status_code != 200:
+                            error_text = await response.aread()
+                            last_err = f"Groq {m} ({response.status_code}): {error_text.decode()[:200]}"
                             continue
+
+                        in_think = False
+                        async for line in response.aiter_lines():
+                            if line.startswith("data: "):
+                                line_data = line[6:].strip()
+                                if line_data == "[DONE]":
+                                    break
+                                try:
+                                    chunk = json.loads(line_data)
+                                    content = chunk.get("choices", [{}])[0].get("delta", {}).get("content", "")
+                                    if content:
+                                        if "<think>" in content:
+                                            in_think = True
+                                            continue
+                                        if "</think>" in content:
+                                            in_think = False
+                                            continue
+                                        if not in_think:
+                                            yield _sanitize_token(content)
+                                except json.JSONDecodeError:
+                                    continue
+                        return  # Successfully finished streaming
+            except Exception as e:
+                last_err = str(e)
+                continue
+
+        raise RuntimeError(f"All Groq models failed. Last error: {last_err}")
 
 
 # ══════════════════════════════════════════════════════════════════════════════

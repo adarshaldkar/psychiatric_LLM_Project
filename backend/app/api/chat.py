@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
-from app.core.database import get_db
+from app.core.database import get_db, SessionLocal
 from app.models.models import User, Conversation, Message
 from app.schemas.schemas import MessageCreate
 from app.api.auth import get_current_user
@@ -39,12 +39,20 @@ async def send_chat_message(
     db.add(user_msg)
     db.commit()
 
+    async def _stream_with_db():
+        stream_db = SessionLocal()
+        try:
+            async for chunk in orchestrator.process_chat_message(
+                user_message=msg_in.content,
+                conversation_id=str(conv_id),
+                user_id=str(current_user.id),
+                db=stream_db
+            ):
+                yield chunk
+        finally:
+            stream_db.close()
+
     return StreamingResponse(
-        orchestrator.process_chat_message(
-            user_message=msg_in.content,
-            conversation_id=str(conv_id),
-            user_id=str(current_user.id),
-            db=db
-        ),
+        _stream_with_db(),
         media_type="text/event-stream"
     )
