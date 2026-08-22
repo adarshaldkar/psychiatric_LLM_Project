@@ -66,7 +66,7 @@ const CloseIcon = () => (
 )
 
 export default function Sidebar({ isOpen, onClose, onNewChat, onSelectConversation, onDeleteConversation, onOpenDocuments, onOpenMemory }) {
-  const { conversations, currentConversationId, user, logout } = useStore()
+  const { conversations, currentConversationId, user, logout, isGuest, openAuthModal } = useStore()
   const [hoveredId, setHoveredId] = useState(null)
   const [menuOpenId, setMenuOpenId] = useState(null)
   const [editingId, setEditingId] = useState(null)
