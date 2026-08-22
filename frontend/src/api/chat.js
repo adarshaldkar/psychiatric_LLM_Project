@@ -5,16 +5,14 @@
  * Set in frontend/.env:  VITE_API_URL=http://localhost:8000
  * Default fallback:      http://localhost:8000  (dev only)
  */
+import { useStore } from "../store/useStore"
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000"
 
 /**
  * Get Authorization headers using JWT token from Zustand store.
- * Imported lazily to avoid circular dependencies.
  */
-const getAuthHeaders = () => {
-  // Import lazily to avoid circular dependency
-  const { useStore } = require("../store/useStore")
+export const getAuthHeaders = () => {
   const token = useStore.getState().token
   return {
     "Content-Type": "application/json",
@@ -27,7 +25,6 @@ const getAuthHeaders = () => {
  * Throws on non-2xx responses with a descriptive error message.
  */
 export const apiFetch = async (path, options = {}) => {
-  const { useStore } = await import("../store/useStore")
   const token = useStore.getState().token
 
   const response = await fetch(`${API_BASE}${path}`, {
@@ -62,7 +59,6 @@ export const sendMessageStream = async (
   onDone,
   onError
 ) => {
-  const { useStore } = await import("../store/useStore")
   const token = useStore.getState().token
 
   try {
@@ -70,7 +66,7 @@ export const sendMessageStream = async (
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
+        ...(token ? { "Authorization": `Bearer ${token}` } : {}),
       },
       body: JSON.stringify({
         conversation_id: conversationId,
@@ -126,7 +122,6 @@ export const sendMessageStream = async (
  * @returns {Promise<{transcript: string, language: string, duration_s: number}>}
  */
 export const transcribeAudio = async (audioBlob, ext = "webm") => {
-  const { useStore } = await import("../store/useStore")
   const token = useStore.getState().token
 
   const formData = new FormData()
@@ -135,7 +130,7 @@ export const transcribeAudio = async (audioBlob, ext = "webm") => {
   const response = await fetch(`${API_BASE}/api/voice/transcribe`, {
     method: "POST",
     headers: {
-      "Authorization": `Bearer ${token}`,
+      ...(token ? { "Authorization": `Bearer ${token}` } : {}),
       // NOTE: Do NOT set Content-Type here — browser sets multipart boundary automatically
     },
     body: formData,
@@ -155,10 +150,9 @@ export const transcribeAudio = async (audioBlob, ext = "webm") => {
  */
 export const getVoiceStatus = async () => {
   try {
-    const { useStore } = await import("../store/useStore")
     const token = useStore.getState().token
     const response = await fetch(`${API_BASE}/api/voice/status`, {
-      headers: { "Authorization": `Bearer ${token}` }
+      headers: { ...(token ? { "Authorization": `Bearer ${token}` } : {}) }
     })
     if (!response.ok) return { available: false }
     return response.json()
