@@ -18,9 +18,21 @@ class UserResponse(BaseModel):
     email: EmailStr
     full_name: Optional[str] = None
     created_at: datetime
+    is_guest: bool = False
     
     class Config:
         from_attributes = True
+
+    @classmethod
+    def from_orm_user(cls, user: Any) -> "UserResponse":
+        is_guest = bool((user.preferences or {}).get("is_guest", False)) if hasattr(user, "preferences") else False
+        return cls(
+            id=user.id,
+            email=user.email,
+            full_name=user.full_name,
+            created_at=user.created_at,
+            is_guest=is_guest
+        )
 
 class TokenResponse(BaseModel):
     access_token: str

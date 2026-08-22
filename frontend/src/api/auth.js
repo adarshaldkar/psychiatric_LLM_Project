@@ -10,7 +10,13 @@ export const registerUser = async (email, password, fullName) => {
   return response.data
 }
 
+export const createGuestSession = async () => {
+  const response = await apiClient.post("/auth/guest")
+  return response.data
+}
+
 export const getCurrentUser = async () => {
   const response = await apiClient.get("/auth/me")
   return response.data
 }
+

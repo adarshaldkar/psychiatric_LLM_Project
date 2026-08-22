@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react"
+import React, { useEffect, useState, useCallback, useRef } from "react"
 import { Routes, Route, Navigate, useNavigate, useParams } from "react-router-dom"
 import { useStore } from "./store/useStore"
 import Sidebar from "./components/Sidebar"
@@ -9,6 +9,11 @@ import DocumentPanel from "./components/DocumentPanel"
 import MemoryPanel from "./components/MemoryPanel"
 import { getConversations, createConversation, getConversationDetail, deleteConversation } from "./api/conversations"
 import { sendMessageStream } from "./api/chat"
+import { createGuestSession } from "./api/auth"
+
+// ── Trial Limit Configuration ────────────────────────────────────────────────
+const GUEST_TIME_LIMIT_MS = 3 * 60 * 1000 // 3 minutes
+const GUEST_MAX_MESSAGES = 3              // 3 free guest messages
 
 // ── Inner layout component (receives route params) ───────────────────────────
 function ChatLayout() {
@@ -18,9 +23,14 @@ function ChatLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [documentsOpen, setDocumentsOpen] = useState(false)
   const [memoryOpen, setMemoryOpen] = useState(false)
+  const timerRef = useRef(null)
 
   const {
     token,
+    isGuest,
+    guestTrialExpired,
+    guestMessageCount,
+    showAuthModal,
     setConversations,
     currentConversationId,
     setCurrentConversationId,
@@ -33,9 +43,40 @@ function ChatLayout() {
     setStreamingStatus,
     addConversation,
     removeConversation,
+    setGuestAuth,
+    incrementGuestMessage,
+    expireGuestTrial,
+    openAuthModal,
   } = useStore()
 
-  // Load conversations list on mount / login
+  // 1. Initial Guest Session Auto-Provisioning
+  useEffect(() => {
+    if (!token) {
+      createGuestSession()
+        .then((data) => {
+          setGuestAuth(data.access_token, data.user)
+        })
+        .catch((err) => {
+          console.warn("Could not start guest session automatically:", err)
+          openAuthModal("manual")
+        })
+    }
+  }, [token, setGuestAuth, openAuthModal])
+
+  // 2. Guest Trial Timer (3 minutes limit)
+  useEffect(() => {
+    if (isGuest && !guestTrialExpired) {
+      timerRef.current = setTimeout(() => {
+        expireGuestTrial("trial_expired")
+      }, GUEST_TIME_LIMIT_MS)
+    }
+
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current)
+    }
+  }, [isGuest, guestTrialExpired, expireGuestTrial])
+
+  // 3. Load conversations list on mount / login
   useEffect(() => {
     if (!token) return
     getConversations()
@@ -53,7 +94,7 @@ function ChatLayout() {
       .catch((err) => console.error("Failed to load conversations:", err))
   }, [token])
 
-  // If convId URL param changes (browser back/forward), load it
+  // 4. If convId URL param changes (browser back/forward), load it
   useEffect(() => {
     if (convId && token && convId !== currentConversationId) {
       handleSelectConversation(convId)
@@ -100,6 +141,18 @@ function ChatLayout() {
   const handleSendMessage = async (text) => {
     if (!text.trim() || isStreaming) return
 
+    // Check if guest trial has expired
+    if (isGuest && guestTrialExpired) {
+      openAuthModal("trial_expired")
+      return
+    }
+
+    // Check message count limit for guest
+    if (isGuest && guestMessageCount >= GUEST_MAX_MESSAGES) {
+      expireGuestTrial("trial_expired")
+      return
+    }
+
     let activeConvId = currentConversationId
     if (!activeConvId) {
       try {
@@ -112,6 +165,11 @@ function ChatLayout() {
         console.error("Failed to create conversation:", err)
         return
       }
+    }
+
+    let msgCount = guestMessageCount
+    if (isGuest) {
+      msgCount = incrementGuestMessage()
     }
 
     addMessage({ role: "user", content: text })
@@ -138,6 +196,13 @@ function ChatLayout() {
         setIsStreaming(false)
         setStreamingStatus("")
         getConversations().then(setConversations).catch(() => {})
+
+        // If guest has completed their max allowed messages, trigger the trial gate modal
+        if (isGuest && msgCount >= GUEST_MAX_MESSAGES) {
+          setTimeout(() => {
+            expireGuestTrial("trial_expired")
+          }, 1000)
+        }
       },
       (errorText) => {
         setIsStreaming(false)
@@ -147,9 +212,26 @@ function ChatLayout() {
     )
   }
 
+  const handleOpenDocuments = () => {
+    if (isGuest) {
+      openAuthModal("feature_locked")
+    } else {
+      setDocumentsOpen(true)
+    }
+  }
+
+  const handleOpenMemory = () => {
+    if (isGuest) {
+      openAuthModal("feature_locked")
+    } else {
+      setMemoryOpen(true)
+    }
+  }
+
   return (
     <div style={{ display: "flex", height: "100vh", overflow: "hidden", background: "var(--bg-primary)" }}>
-      {!token && <AuthModal />}
+      {/* Show AuthModal whenever requested or when trial has expired */}
+      {showAuthModal && <AuthModal />}
 
       <Sidebar
         isOpen={sidebarOpen}
@@ -157,8 +239,8 @@ function ChatLayout() {
         onNewChat={handleNewChat}
         onSelectConversation={handleSelectConversation}
         onDeleteConversation={handleDeleteConversation}
-        onOpenDocuments={() => setDocumentsOpen(true)}
-        onOpenMemory={() => setMemoryOpen(true)}
+        onOpenDocuments={handleOpenDocuments}
+        onOpenMemory={handleOpenMemory}
       />
 
       <DocumentPanel
@@ -177,7 +259,7 @@ function ChatLayout() {
           onOpenSidebar={() => setSidebarOpen(true)}
           onToggleSidebar={() => setSidebarOpen(prev => !prev)}
         />
-        <InputBar onSend={handleSendMessage} onOpenDocuments={() => setDocumentsOpen(true)} />
+        <InputBar onSend={handleSendMessage} onOpenDocuments={handleOpenDocuments} />
       </main>
     </div>
   )

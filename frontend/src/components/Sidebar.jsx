@@ -427,57 +427,87 @@ export default function Sidebar({ isOpen, onClose, onNewChat, onSelectConversati
           )}
         </div>
 
-        {/* User Profile Footer */}
+        {/* User Profile / Guest Footer */}
         <div style={{ borderTop: "1px solid var(--border)", padding: "12px 12px", position: "relative" }}>
-          {/* User Profile Dropdown Menu */}
-          {showProfileMenu && (
-            <div ref={profileMenuRef} style={{
-              position: "absolute", bottom: 60, left: 12, right: 12, zIndex: 100,
-              background: "#212121", border: "1px solid rgba(255,255,255,0.12)",
-              borderRadius: 10, padding: 6, boxShadow: "0 10px 30px rgba(0,0,0,0.6)",
-              display: "flex", flexDirection: "column", gap: 2
-            }}>
-              <button onClick={() => { setShowProfileMenu(false); setShowProfileModal(true) }} style={contextItemStyle}>
-                <UserIcon /> Profile
-              </button>
-              <button onClick={() => { setShowProfileMenu(false); setShowArchiveModal(true) }} style={contextItemStyle}>
-                <ArchiveIcon /> Archived Chats ({archivedIds.length})
-              </button>
-              <div style={{ height: 1, background: "rgba(255,255,255,0.08)", margin: "4px 0" }} />
-              <button onClick={() => { setShowProfileMenu(false); logout() }} style={{ ...contextItemStyle, color: "#ef4444" }}>
-                <LogoutIcon /> Log out
+          {isGuest ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <div style={{
+                display: "flex", alignItems: "center", justifyContent: "space-between",
+                padding: "8px 10px", borderRadius: 8,
+                background: "rgba(245, 158, 11, 0.1)", border: "1px solid rgba(245, 158, 11, 0.25)",
+                fontSize: 12, color: "#f59e0b"
+              }}>
+                <span style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 500 }}>
+                  <span>⏳</span> Guest Preview
+                </span>
+                <span style={{ fontSize: 11, opacity: 0.85 }}>Free Trial</span>
+              </div>
+              <button
+                onClick={() => openAuthModal("manual")}
+                style={{
+                  width: "100%", padding: "8px 12px", borderRadius: 8, border: "none",
+                  background: "linear-gradient(135deg, var(--accent) 0%, #2563eb 100%)",
+                  color: "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer",
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                  boxShadow: "0 2px 8px rgba(37, 99, 235, 0.35)", transition: "transform 0.1s"
+                }}
+              >
+                <span>✨</span> Sign In / Register
               </button>
             </div>
-          )}
+          ) : (
+            <>
+              {/* User Profile Dropdown Menu */}
+              {showProfileMenu && (
+                <div ref={profileMenuRef} style={{
+                  position: "absolute", bottom: 60, left: 12, right: 12, zIndex: 100,
+                  background: "#212121", border: "1px solid rgba(255,255,255,0.12)",
+                  borderRadius: 10, padding: 6, boxShadow: "0 10px 30px rgba(0,0,0,0.6)",
+                  display: "flex", flexDirection: "column", gap: 2
+                }}>
+                  <button onClick={() => { setShowProfileMenu(false); setShowProfileModal(true) }} style={contextItemStyle}>
+                    <UserIcon /> Profile
+                  </button>
+                  <button onClick={() => { setShowProfileMenu(false); setShowArchiveModal(true) }} style={contextItemStyle}>
+                    <ArchiveIcon /> Archived Chats ({archivedIds.length})
+                  </button>
+                  <div style={{ height: 1, background: "rgba(255,255,255,0.08)", margin: "4px 0" }} />
+                  <button onClick={() => { setShowProfileMenu(false); logout() }} style={{ ...contextItemStyle, color: "#ef4444" }}>
+                    <LogoutIcon /> Log out
+                  </button>
+                </div>
+              )}
 
-          <div
-            onClick={() => setShowProfileMenu(!showProfileMenu)}
-            style={{
-              display: "flex", alignItems: "center", gap: 10,
-              padding: "8px 10px", borderRadius: 8, cursor: "pointer",
-              background: "var(--bg-primary)", transition: "background 0.15s"
-            }}
-            onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.06)"}
-            onMouseLeave={e => e.currentTarget.style.background = "var(--bg-primary)"}
-          >
-            <div style={{
-              width: 30, height: 30, borderRadius: 7,
-              background: "var(--bg-tertiary)", display: "flex",
-              alignItems: "center", justifyContent: "center", flexShrink: 0,
-              fontSize: 12, fontWeight: 600, color: "var(--accent)"
-            }}>
-              {(user?.full_name || user?.email || "U")[0].toUpperCase()}
-            </div>
-            <div style={{ flex: 1, overflow: "hidden" }}>
-              <div style={{ fontSize: 13, fontWeight: 500, color: "var(--text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {user?.full_name || "User"}
+              <div
+                onClick={() => setShowProfileMenu(!showProfileMenu)}
+                style={{
+                  display: "flex", alignItems: "center", gap: 10,
+                  padding: "8px 10px", borderRadius: 8, cursor: "pointer",
+                  background: "var(--bg-primary)", transition: "background 0.15s"
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.06)"}
+                onMouseLeave={e => e.currentTarget.style.background = "var(--bg-primary)"}
+              >
+                <div style={{
+                  width: 30, height: 30, borderRadius: 7,
+                  background: "var(--bg-tertiary)", display: "flex",
+                  alignItems: "center", justifyContent: "center", flexShrink: 0,
+                  fontSize: 12, fontWeight: 600, color: "var(--accent)"
+                }}>
+                  {(user?.full_name || user?.email || "U")[0].toUpperCase()}
+                </div>
+                <div style={{ flex: 1, overflow: "hidden" }}>
+                  <div style={{ fontSize: 13, fontWeight: 500, color: "var(--text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {user?.full_name || "User"}
+                  </div>
+                  <div style={{ fontSize: 11, color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {user?.email}
+                  </div>
+                </div>
+                <MoreIcon />
               </div>
-              <div style={{ fontSize: 11, color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {user?.email}
-              </div>
-            </div>
-            <MoreIcon />
-          </div>
+            </>
+          )}
         </div>
       </aside>
     </>

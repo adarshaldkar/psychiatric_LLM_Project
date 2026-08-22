@@ -1,3 +1,4 @@
+import uuid
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.core.database import get_db
@@ -24,6 +25,29 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
     return user
+
+@router.post("/guest", response_model=TokenResponse)
+def create_guest(db: Session = Depends(get_db)):
+    """
+    Creates an anonymous guest user account for immediate, friction-free AI exploration.
+    Allows visitors to chat and test MindCare AI without upfront login barriers.
+    """
+    guest_uid = uuid.uuid4().hex[:12]
+    guest_email = f"guest_{guest_uid}@guest.mindcare.ai"
+    guest_pw = uuid.uuid4().hex
+    
+    user = User(
+        email=guest_email,
+        password_hash=hash_password(guest_pw),
+        full_name="Guest Visitor",
+        preferences={"is_guest": True, "created_as": "trial"}
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+    token = create_access_token(str(user.id))
+    return TokenResponse(access_token=token, user=UserResponse.from_orm_user(user))
 
 @router.post("/register", response_model=TokenResponse)
 def register(user_in: UserRegister, db: Session = Depends(get_db)):
@@ -53,14 +77,15 @@ def register(user_in: UserRegister, db: Session = Depends(get_db)):
     user = User(
         email=user_in.email,
         password_hash=hash_password(user_in.password),
-        full_name=user_in.full_name
+        full_name=user_in.full_name,
+        preferences={"is_guest": False}
     )
     db.add(user)
     db.commit()
     db.refresh(user)
 
     token = create_access_token(str(user.id))
-    return TokenResponse(access_token=token, user=UserResponse.model_validate(user))
+    return TokenResponse(access_token=token, user=UserResponse.from_orm_user(user))
 
 @router.post("/login", response_model=TokenResponse)
 def login(user_in: UserLogin, db: Session = Depends(get_db)):
@@ -69,8 +94,8 @@ def login(user_in: UserLogin, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Incorrect email or password")
 
     token = create_access_token(str(user.id))
-    return TokenResponse(access_token=token, user=UserResponse.model_validate(user))
+    return TokenResponse(access_token=token, user=UserResponse.from_orm_user(user))
 
 @router.get("/me", response_model=UserResponse)
 def get_me(current_user: User = Depends(get_current_user)):
-    return UserResponse.model_validate(current_user)
+    return UserResponse.from_orm_user(current_user)
