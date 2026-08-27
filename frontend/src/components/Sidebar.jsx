@@ -427,32 +427,35 @@ export default function Sidebar({ isOpen, onClose, onNewChat, onSelectConversati
           )}
         </div>
 
-        {/* User Profile / Guest Footer */}
+        {/* User Profile / Footer */}
         <div style={{ borderTop: "1px solid var(--border)", padding: "12px 12px", position: "relative" }}>
           {isGuest ? (
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               <div style={{
                 display: "flex", alignItems: "center", justifyContent: "space-between",
                 padding: "8px 10px", borderRadius: 8,
-                background: "rgba(245, 158, 11, 0.1)", border: "1px solid rgba(245, 158, 11, 0.25)",
-                fontSize: 12, color: "#f59e0b"
+                background: "rgba(16, 185, 129, 0.1)", border: "1px solid rgba(16, 185, 129, 0.25)",
+                fontSize: 12, color: "#10b981"
               }}>
                 <span style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 500 }}>
-                  <span>⏳</span> Guest Preview
+                  <span className="pulse-dot" style={{ width: 7, height: 7, borderRadius: "50%", background: "#10b981" }} />
+                  <span>Clinical Assistant</span>
                 </span>
-                <span style={{ fontSize: 11, opacity: 0.85 }}>Free Trial</span>
+                <span style={{ fontSize: 11, opacity: 0.85 }}>Free Access</span>
               </div>
               <button
                 onClick={() => openAuthModal("manual")}
                 style={{
-                  width: "100%", padding: "8px 12px", borderRadius: 8, border: "none",
-                  background: "linear-gradient(135deg, var(--accent) 0%, #2563eb 100%)",
-                  color: "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer",
+                  width: "100%", padding: "7px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.12)",
+                  background: "rgba(255,255,255,0.05)",
+                  color: "var(--text-secondary)", fontSize: 12, fontWeight: 500, cursor: "pointer",
                   display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-                  boxShadow: "0 2px 8px rgba(37, 99, 235, 0.35)", transition: "transform 0.1s"
+                  transition: "all 0.15s"
                 }}
+                onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.1)"; e.currentTarget.style.color = "#fff" }}
+                onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.05)"; e.currentTarget.style.color = "var(--text-secondary)" }}
               >
-                <span>✨</span> Sign In / Register
+                <span>👤</span> Account (Optional)
               </button>
             </div>
           ) : (

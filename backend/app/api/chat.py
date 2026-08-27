@@ -24,7 +24,11 @@ async def send_chat_message(
     else:
         conv = db.query(Conversation).filter(Conversation.id == msg_in.conversation_id, Conversation.user_id == current_user.id).first()
         if not conv:
-            raise HTTPException(status_code=404, detail="Conversation not found")
+            # Auto-heal: If conversation belonged to past session or is invalid, create a fresh valid one
+            conv = Conversation(user_id=current_user.id, title=msg_in.content[:30] + "...")
+            db.add(conv)
+            db.commit()
+            db.refresh(conv)
         conv_id = conv.id
 
     if conv.title == "New Conversation":

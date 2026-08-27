@@ -1,31 +1,30 @@
 import { create } from "zustand"
 
 const savedUser = JSON.parse(localStorage.getItem("mindcare_user") || "null")
-const isGuestExpired = localStorage.getItem("mindcare_guest_expired") === "true"
+
+// Clear any previous locked trial states from localStorage
+try {
+  localStorage.removeItem("mindcare_guest_expired")
+} catch (_) {}
 
 export const useStore = create((set, get) => ({
   token: localStorage.getItem("mindcare_token") || null,
   user: savedUser,
   isGuest: Boolean(savedUser?.is_guest),
-  guestMessageCount: parseInt(localStorage.getItem("mindcare_guest_msg_count") || "0", 10),
-  guestTrialExpired: isGuestExpired,
-  showAuthModal: isGuestExpired,
-  authModalReason: isGuestExpired ? "trial_expired" : "manual", // "manual" | "trial_expired" | "feature_locked"
+  guestMessageCount: 0,
+  guestTrialExpired: false,
+  showAuthModal: false,
+  authModalReason: "manual", // "manual" | "feature_locked"
 
   setAuth: (token, user) => {
     localStorage.setItem("mindcare_token", token)
     localStorage.setItem("mindcare_user", JSON.stringify(user))
-    const isGuest = Boolean(user?.is_guest)
-    if (!isGuest) {
-      localStorage.removeItem("mindcare_guest_expired")
-      localStorage.removeItem("mindcare_guest_msg_count")
-    }
     set({
       token,
       user,
-      isGuest,
+      isGuest: Boolean(user?.is_guest),
       showAuthModal: false,
-      guestTrialExpired: isGuest ? get().guestTrialExpired : false
+      guestTrialExpired: false
     })
   },
 
@@ -36,24 +35,19 @@ export const useStore = create((set, get) => ({
       token,
       user,
       isGuest: true,
-      showAuthModal: false
+      showAuthModal: false,
+      guestTrialExpired: false
     })
   },
 
   incrementGuestMessage: () => {
     const current = get().guestMessageCount + 1
-    localStorage.setItem("mindcare_guest_msg_count", current.toString())
     set({ guestMessageCount: current })
     return current
   },
 
-  expireGuestTrial: (reason = "trial_expired") => {
-    localStorage.setItem("mindcare_guest_expired", "true")
-    set({
-      guestTrialExpired: true,
-      showAuthModal: true,
-      authModalReason: reason
-    })
+  expireGuestTrial: () => {
+    // No-op: Unlimited free access enabled
   },
 
   openAuthModal: (reason = "manual") => {
@@ -61,10 +55,7 @@ export const useStore = create((set, get) => ({
   },
 
   closeAuthModal: () => {
-    // Only allow closing if trial hasn't strictly expired or if user is already logged in
-    if (!get().guestTrialExpired || !get().isGuest) {
-      set({ showAuthModal: false })
-    }
+    set({ showAuthModal: false })
   },
 
   logout: () => {

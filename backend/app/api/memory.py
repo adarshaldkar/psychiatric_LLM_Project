@@ -8,7 +8,7 @@ Endpoints:
 import uuid
 import logging
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Response
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 
@@ -18,9 +18,7 @@ from app.models.models import User, LongTermMemory
 
 logger = logging.getLogger(__name__)
 
-from fastapi import APIRouter, Depends, HTTPException, status, Response
-
-router = APIRouter(prefix="/api/memory", tags=["memory"])
+router = APIRouter(prefix="/memory", tags=["memory"])
 
 
 @router.get("/long-term")
@@ -33,7 +31,7 @@ def list_long_term_memories(
     """
     List all stored long-term memories (episodic & semantic) for the current user.
     """
-    print(f"\n🧠 [MEMORY API] Received GET /api/memory/long-term request from user_id={current_user.id}", flush=True)
+    logger.info(f"[MEMORY API] Received GET /api/memory/long-term request from user_id={current_user.id}")
     memories = (
         db.query(LongTermMemory)
         .filter(LongTermMemory.user_id == current_user.id)

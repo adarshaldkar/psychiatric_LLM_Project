@@ -61,7 +61,7 @@ class Settings(BaseSettings):
 
     # ── Security — CORS ─────────────────────────────────────
     # Comma-separated allowed origins. Override in .env for production.
-    ALLOWED_ORIGINS: str = 'http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173'
+    ALLOWED_ORIGINS: str = 'https://psychiatric-llm-project.vercel.app,http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173'
 
     # ── Voice STT ────────────────────────────────────────────
     WHISPER_MODEL: str = 'base'  # Options: tiny, base, small, medium, large
